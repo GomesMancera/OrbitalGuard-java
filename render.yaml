@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: orbitalguard-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: orbitalguard-db
+          property: connectionString
+      - key: DATABASE_USERNAME
+        fromDatabase:
+          name: orbitalguard-db
+          property: user
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: orbitalguard-db
+          property: password
+
+databases:
+  - name: orbitalguard-db
+    plan: free
+    databaseName: orbitalguard
+    user: orbitalguard
