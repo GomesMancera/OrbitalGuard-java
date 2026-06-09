@@ -5,6 +5,20 @@ Serviço backend responsável por gerenciar **regiões monitoradas**, registrar 
 
 ---
 
+## Links do Projeto
+
+| Recurso | URL |
+|---------|-----|
+| Repositório GitHub | https://github.com/GomesMancera/OrbitalGuard-java |
+| Deploy (API) | https://orbitalguard-api.onrender.com |
+| Swagger / OpenAPI | https://orbitalguard-api.onrender.com/swagger-ui/index.html |
+| Health Check | https://orbitalguard-api.onrender.com/actuator/health |
+| Vídeo apresentação (10 min) | https://youtu.be/HNdScQvER8I |
+| Vídeo pitch (3 min) |  |
+
+---
+
+
 ## ✨ Visão Geral
 
 - **Contexto da GS**: Monitoramento ambiental, sustentabilidade e alertas em tempo real.
@@ -609,10 +623,11 @@ curl http://localhost:8080/h2-console
 
 | Nome | RM | Função |
 |------|-----|--------|
-| Gabriel Gomes Mancera | 562279 | Arquitetura / Backend |
-| Raphael Gomes Mancera | 562279 | Testes / Deploy |
-| Bruno Vinicius Barbosa | 566366 | JPA Modeling |
-| João Victor Rebello de Santis | 555287 | Controllers / DTOs |
+| Gabriel Gomes Mancera | 562279 | 
+| Raphael Gomes Mancera | 562279 | 
+| Bruno Vinicius Barbosa | 566366 | 
+| João Victor Rebello de Santis | 555287 | 
+| Guilherme de andrade Martini | 566087 | 
 
 ---
 
@@ -622,6 +637,6 @@ Projeto acadêmico — FIAP Global Solution (Java Advanced).
 
 ---
 
-**Status:** ✅ Em produção no Render  
-**Última atualização:** Junho 2025  
+**Status:** Em produção no Render  
+**Última atualização:** Junho 2026  
 **Repositório:** https://github.com/GomesMancera/OrbitalGuard-java
