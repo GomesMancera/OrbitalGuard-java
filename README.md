@@ -1,242 +1,627 @@
-# OrbitalGuard API
+# 🛰️ OrbitalGuard — Módulo de Monitoramento Ambiental (Java/Spring)
 
-API REST de monitoramento ambiental desenvolvida para a **FIAP Global Solution** (Java Advanced). O OrbitalGuard centraliza o gerenciamento de regioes monitoradas, sensores ambientais, leituras, alertas e ocorrencias.
+Serviço backend responsável por gerenciar **regiões monitoradas**, registrar **leituras de sensores ambientais** (água e ar), gerar **alertas automáticos** e rastrear **ocorrências** de anomalias.  
+É o módulo Java da plataforma **OrbitalGuard**, integrado à Global Solution FIAP 2025 (Java Advanced).
 
-## Links do Projeto
+---
 
-| Recurso | URL |
-|---------|-----|
-| Repositorio GitHub | https://github.com/GomesMancera/OrbitalGuard-java |
-| Deploy (API) | https://orbitalguard-api.onrender.com |
-| Swagger / OpenAPI | https://orbitalguard-api.onrender.com/swagger-ui/index.html |
-| Health Check | https://orbitalguard-api.onrender.com/actuator/health |
-| Video apresentacao (10 min) | _Substituir apos gravacao_ |
-| Video pitch (3 min) | _Substituir apos gravacao_ |
+## ✨ Visão Geral
 
-## Integrantes
+- **Contexto da GS**: Monitoramento ambiental, sustentabilidade e alertas em tempo real.
+- **Domínio**: Regiões geográficas + Sensores especializados (água/ar) + Leituras + Alertas + Ocorrências.
+- **Objetivo**:
+    - Centralizar o gerenciamento de regiões monitoradas com coordenadas GPS.
+    - Registrar **sensores especializados** (SensorAgua/SensorAr) com dados específicos do tipo.
+    - Coletar **leituras em tempo real** com chave composta (sensor + timestamp).
+    - Emitir **alertas automáticos** quando métricas excedem limiares.
+    - Rastrear **ocorrências** vinculadas aos alertas para análise histórica.
+- **Consumidores da API**:
+    - Painéis web/mobile de monitoramento ambiental.
+    - Sistemas de ONGs e órgãos ambientais.
+    - Integrações com pipelines de analytics.
 
-| Nome | RM |
-|------|-----|
-| Integrante 1 | RM000000 |
-| Integrante 2 | RM000000 |
+---
 
-## Proposta da Solucao
+## 🧱 Stack Técnica
 
-O OrbitalGuard e uma plataforma de monitoramento ambiental que integra sensores de agua e ar distribuidos em diferentes regioes. A API permite:
+- **Linguagem**: Java 17
+- **Framework**: Spring Boot 3.3.x
+- **Módulos Spring**:
+    - `spring-boot-starter-web` (API REST)
+    - `spring-boot-starter-data-jpa` (persistência com Hibernate)
+    - `spring-boot-starter-validation` (Bean Validation)
+    - `spring-boot-starter-security` (autenticação JWT)
+    - `spring-boot-starter-actuator` (health, info)
+    - `spring-boot-devtools` (hot reload em dev)
+- **Banco de dados**:
+    - **H2 em memória** (dev & testes)
+    - **PostgreSQL** (produção)
+- **Documentação**: Springdoc OpenAPI (`/swagger-ui/index.html`)
+- **Segurança**: JWT (JJWT) + Spring Security
+- **Hipermídia**: Spring HATEOAS (links em respostas)
+- **Ferramentas**:
+    - Lombok (redução de boilerplate)
+    - Maven (build system)
+    - Docker (containerização)
+    - GitHub Actions (CI/CD)
+- **Teste**:
+    - `@WebMvcTest` para controllers
+    - `@DataJpaTest` para repositórios
+    - `@SpringBootTest` para contexto completo
 
-- Cadastrar regioes geograficas com coordenadas GPS
-- Gerenciar sensores especializados (agua/ar) com heranca JPA
-- Registrar leituras com chave composta (sensor + data/hora)
-- Emitir alertas por regiao e registrar ocorrencias vinculadas
+---
 
-## Tecnologias Utilizadas
+## 🔧 Perfis & Configuração
 
-- Java 17
-- Spring Boot 3.3
-- Spring Data JPA
-- Spring Security + JWT
-- Spring HATEOAS
-- Spring Validation
-- Lombok
-- Spring Boot DevTools
-- Springdoc OpenAPI (Swagger)
-- H2 (desenvolvimento)
-- PostgreSQL (producao)
-- Maven
-- Docker
-- Render (deploy)
+### Perfis Ativos
 
-## Arquitetura
+- **`dev` (padrão)**
+    - Banco H2 em memória (`jdbc:h2:mem:orbitalguard;MODE=PostgreSQL`)
+    - Console H2 em `/h2-console`
+    - Segurança relaxada (`permitAll` em `/api/v1/regioes` para GET)
+    - Seed de dados via `DataInitializer` (cria usuário admin)
 
-```mermaid
-flowchart TB
-    Client[Cliente / Swagger UI]
-    API[Spring Boot API]
-    Security[Spring Security + JWT]
-    Service[Camada Service]
-    Repo[Spring Data JPA]
-    DB[(H2 / PostgreSQL)]
+- **`prod`**
+    - Banco PostgreSQL via variável de ambiente `DATABASE_URL`
+    - Segurança rigorosa: JWT obrigatório em endpoints protegidos
+    - Sem acesso a `/h2-console`
 
-    Client --> API
-    API --> Security
-    Security --> Service
-    Service --> Repo
-    Repo --> DB
+### `application.yml` (Resumo)
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:h2:mem:orbitalguard  # dev
+    username: sa
+    password: ""
+  jpa:
+    hibernate.ddl-auto: create-drop  # dev
+    show-sql: true
+  h2.console.enabled: true  # dev
+
+  security:
+    jwt:
+      secret: ${JWT_SECRET:default-secret-key-for-dev}  # mín 32 chars em prod
+
+app:
+  jwt:
+    expiration: 86400000  # 24 horas
 ```
 
-### Estrutura de Pacotes
-
-```
-br.com.fiap.orbitalguard
-├── controller    # REST + HATEOAS
-├── service       # Regras de negocio
-├── repository    # JpaRepository
-├── model         # Entidades JPA
-├── dto           # Records (request/response)
-├── exception     # Tratamento global de erros
-├── config        # Security, CORS, OpenAPI
-└── security      # JWT
+Para **produção** (`application-prod.yml`):
+```yaml
+spring:
+  datasource:
+    url: ${DATABASE_URL}  # Render PostgreSQL
+  jpa:
+    hibernate.ddl-auto: validate
+    show-sql: false
 ```
 
-## Modelo de Dados
+### Variáveis de Ambiente (Produção)
 
-```mermaid
-erDiagram
-    Usuario ||--o{ Ocorrencia : registra
-    Regiao ||--o{ Sensor : possui
-    Regiao ||--o{ Alerta : gera
-    Sensor ||--o{ LeituraSensor : produz
-    Alerta ||--o{ Ocorrencia : gera
-    SensorAgua ||--|| Sensor : herda
-    SensorAr ||--|| Sensor : herda
+```bash
+# Banco PostgreSQL (Render)
+DATABASE_URL=postgresql://user:pass@host:5432/orbitalguard
+
+# JWT (mínimo 32 caracteres)
+JWT_SECRET=sua-chave-secreta-aleatoria-com-32-caracteres
+
+# Perfil ativo
+SPRING_PROFILES_ACTIVE=prod
 ```
 
-### Modelagem Avancada JPA
+---
 
-| Recurso | Implementacao |
-|---------|---------------|
-| Heranca | `Sensor` -> `SensorAgua` / `SensorAr` (JOINED) |
-| Chave composta | `LeituraSensorId` (sensorId + dataHoraLeitura) |
-| Embedded | `Coordenadas` em `Regiao` e `Sensor` |
-| Multiplas tabelas | 8+ tabelas relacionadas |
+## 🗃️ Estrutura do Banco de Dados
 
-## Endpoints
+### Entidades JPA (8 no total)
 
-### Autenticacao (publico)
+```
+Regiao
+  ├─ coordenadas: Coordenadas (embedded)
+  ├─ sensores: List<Sensor>
+  ├─ alertas: List<Alerta>
+  └─ ocorrencias: List<Ocorrencia>
 
-| Metodo | Endpoint | Descricao |
-|--------|----------|-----------|
-| POST | `/api/v1/auth/register` | Registrar usuario |
-| POST | `/api/v1/auth/login` | Login e obter JWT |
+Sensor (abstract, inheritance=JOINED)
+  ├─ SensorAgua (phMinimo, phMaximo, turbidezMaxima)
+  └─ SensorAr (umidadeMinima, temperaturaMaxima, particuladosMaximos)
+  └─ localizacao: Coordenadas (embedded)
 
-### Regioes
+LeituraSensor
+  ├─ id: LeituraSensorId (composite key)
+  ├─ sensor: Sensor
+  └─ valor: Double
 
-| Metodo | Endpoint | Auth |
-|--------|----------|------|
-| GET | `/api/v1/regioes` | Publico (listagem/detalhe) |
-| GET | `/api/v1/regioes/{id}` | Publico |
-| POST | `/api/v1/regioes` | JWT (ADMIN/OPERADOR) |
-| PUT | `/api/v1/regioes/{id}` | JWT (ADMIN/OPERADOR) |
-| DELETE | `/api/v1/regioes/{id}` | JWT (ADMIN) |
+Alerta
+  ├─ regiao: Regiao
+  ├─ nivelSeveridade: NivelSeveridade (BAIXO, MÉDIO, ALTO, CRÍTICO)
+  └─ ocorrencias: List<Ocorrencia>
 
-### Sensores, Leituras, Alertas, Ocorrencias, Usuarios
+Ocorrencia
+  ├─ alerta: Alerta
+  ├─ usuario: Usuario
+  └─ descricao: String
 
-| Recurso | Base URL |
-|---------|----------|
-| Sensores | `/api/v1/sensores` |
-| Leituras | `/api/v1/leituras` |
-| Alertas | `/api/v1/alertas` |
-| Ocorrencias | `/api/v1/ocorrencias` |
-| Usuarios | `/api/v1/usuarios` |
+Usuario
+  ├─ role: Role (ADMIN, OPERADOR, USUARIO)
+  └─ ocorrencias: List<Ocorrencia>
+```
 
-Todos exigem JWT (exceto GET de regioes). Documentacao completa no Swagger.
+### Características Avançadas JPA
 
-## Como Executar Localmente
+1. **Herança JOINED**: `Sensor` → `SensorAgua` / `SensorAr`
+   - Cada subtipo em tabela separada com FK para `sensor`
+   - `@DiscriminatorColumn(name="tipo_sensor")`
 
-### Pre-requisitos
+2. **Chave Composta**: `LeituraSensorId`
+   ```java
+   @Embeddable
+   public class LeituraSensorId {
+       private Long sensorId;
+       private LocalDateTime dataHoraLeitura;
+   }
+   ```
+   - Garante apenas 1 leitura por sensor/timestamp
+
+3. **Embedded Type**: `Coordenadas`
+   ```java
+   @Embeddable
+   public class Coordenadas {
+       private Double latitude;   // -90 a 90
+       private Double longitude;  // -180 a 180
+   }
+   ```
+   - Reutilizado em `Regiao` e `Sensor`
+
+---
+
+## 🔌 Endpoints (v1)
+
+Todos expostos no path base `/api/v1`.  
+Documentação interativa em: **`/swagger-ui/index.html`** (dev e prod).
+
+### 1) Autenticação
+
+#### POST `/api/v1/auth/register`
+
+Registrar novo usuário. Role padrão: `OPERADOR`.
+
+**Request:**
+```json
+{
+  "nome": "João Silva",
+  "email": "joao@example.com",
+  "senha": "Senha@123"
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "type": "Bearer"
+}
+```
+
+**Exemplo cURL:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"nome":"João","email":"joao@example.com","senha":"Senha@123"}'
+```
+
+#### POST `/api/v1/auth/login`
+
+Fazer login e obter JWT. Válido por 24 horas.
+
+---
+
+### 2) Regiões (Públicas para GET, Privadas para Criar/Editar)
+
+#### GET `/api/v1/regioes`
+
+Listar **todas** as regiões (sem autenticação).
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "nome": "Amazônia",
+    "coordenadas": {"latitude": -3.46, "longitude": -62.21},
+    "_links": {
+      "self": {"href": "/api/v1/regioes/1"},
+      "update": {"href": "/api/v1/regioes/1"},
+      "delete": {"href": "/api/v1/regioes/1"}
+    }
+  }
+]
+```
+
+#### POST `/api/v1/regioes`
+
+Criar região. Requer role `ADMIN` ou `OPERADOR`.
+
+**Request (com JWT):**
+```bash
+curl -X POST http://localhost:8080/api/v1/regioes \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nome": "Região Amazônia",
+    "descricao": "Monitoramento da Amazônia",
+    "latitude": -3.4653,
+    "longitude": -62.2159
+  }'
+```
+
+#### PUT `/api/v1/regioes/{id}`
+
+Atualizar região. Requer `ADMIN` ou `OPERADOR`.
+
+#### DELETE `/api/v1/regioes/{id}`
+
+Deletar região. Requer `ADMIN`.
+
+---
+
+### 3) Sensores (com Herança JPA)
+
+#### POST `/api/v1/sensores`
+
+Criar sensor (água ou ar). Requer JWT.
+
+**Request:**
+```json
+{
+  "nome": "Sensor Rio Negro",
+  "localizacao": {"latitude": -3.10, "longitude": -60.02},
+  "tipo": "AGUA",
+  "regiaoId": 1,
+  "phMinimo": 6.5,
+  "phMaximo": 8.5,
+  "turbidezMaxima": 50
+}
+```
+
+**Resposta inclui tipo específico:**
+```json
+{
+  "id": 1,
+  "nome": "Sensor Rio Negro",
+  "tipo_sensor": "AGUA",
+  "phMinimo": 6.5,
+  "phMaximo": 8.5,
+  "_links": { ... }
+}
+```
+
+#### GET `/api/v1/sensores`
+
+Listar todos os sensores (herança transparente).
+
+---
+
+### 4) Leituras (com Chave Composta)
+
+#### POST `/api/v1/leituras`
+
+Registrar leitura para um sensor. Chave composta garante 1 por timestamp.
+
+**Request:**
+```json
+{
+  "sensorId": 1,
+  "dataHoraLeitura": "2025-06-09T14:30:00",
+  "valor": 7.5
+}
+```
+
+#### GET `/api/v1/leituras`
+
+Listar leituras com paginação.
+
+**Parâmetros:**
+- `sensorId` (opcional)
+- `page=0`, `size=10` (paginação)
+
+---
+
+### 5) Alertas
+
+#### POST `/api/v1/alertas`
+
+Criar alerta para uma região.
+
+**Request:**
+```json
+{
+  "regiaoId": 1,
+  "nivelSeveridade": "ALTO",
+  "descricao": "Nível de barulho acima do normal"
+}
+```
+
+#### GET `/api/v1/alertas`
+
+Listar alertas de uma região (filtro por `regiaoId`).
+
+---
+
+### 6) Ocorrências
+
+#### POST `/api/v1/ocorrencias`
+
+Registrar ocorrência vinculada a um alerta.
+
+**Request:**
+```json
+{
+  "alertaId": 1,
+  "descricao": "Evento confirmado por inspeção local"
+}
+```
+
+#### GET `/api/v1/ocorrencias`
+
+Listar ocorrências.
+
+---
+
+### 7) Usuários (Listagem)
+
+#### GET `/api/v1/usuarios`
+
+Listar usuários (requer autenticação). Apenas `ADMIN` pode listar todos.
+
+---
+
+## 🌐 Validação & Tratamento de Erros
+
+### Validações Bean Validation
+
+- **Regiões**: `nome` (@NotBlank, 1-100 chars), `latitude` (-90 a 90), `longitude` (-180 a 180)
+- **Sensores**: `nome` (@NotBlank), `tipo` (@NotNull, enum)
+- **Leituras**: `dataHoraLeitura` (@NotNull), `valor` (@NotNull, range)
+- **Alertas**: `nivelSeveridade` (enum BAIXO/MÉDIO/ALTO/CRÍTICO)
+- **Usuários**: `email` (@Email, @NotNull), `senha` (min 8 chars)
+
+### Resposta de Erro (GlobalExceptionHandler)
+
+```json
+{
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Erro de validação",
+  "path": "/api/v1/regioes",
+  "fieldErrors": {
+    "nome": "Tamanho deve estar entre 1 e 100",
+    "latitude": "Deve estar entre -90.0 e 90.0"
+  }
+}
+```
+
+---
+
+## 🛡️ Segurança (Spring Security + JWT)
+
+### Autenticação JWT
+
+```
+1. Usuário registra/faz login → senha validada com BCrypt
+2. JWT gerado com claims: { sub, roles, iat, exp }
+3. Cliente envia: Authorization: Bearer <token>
+4. JwtAuthenticationFilter extrai e valida token
+5. Spring Security monta authentication context
+6. @PreAuthorize("hasRole('ADMIN')") valida autorização
+```
+
+### Perfis de Segurança
+
+**Dev** (`SecurityConfig.devChain()`):
+```yaml
+permitAll:
+  - GET /api/v1/regioes
+  - POST /api/v1/auth/**
+  - /h2-console/**
+  - /swagger-ui/**
+```
+
+**Prod** (`SecurityConfig.prodChain()`):
+```yaml
+requiresJWT:
+  - POST /api/v1/regioes
+  - PUT /api/v1/regioes/{id}
+  - DELETE /api/v1/regioes/{id}
+  - POST /api/v1/sensores
+  - ...
+```
+
+### Roles
+
+| Role | Permissões |
+|------|-----------|
+| `ADMIN` | CRUD completo |
+| `OPERADOR` | CREATE, READ, UPDATE (sem DELETE) |
+| `USUARIO` | READ only |
+
+---
+
+## 🧪 Testes Automatizados
+
+Localizados em `src/test/java/br/com/fiap/orbitalguard/integration`:
+
+### RegiaoIntegrationTest
+- `@SpringBootTest @AutoConfigureMockMvc`
+- Testa: POST (202), GET, PUT, DELETE
+- Valida: HATEOAS links, autenticação, autorização
+
+### SensorIntegrationTest
+- Testa: Herança JOINED (SensorAgua, SensorAr)
+- Valida: Tipo específico retornado na resposta
+
+### AuthIntegrationTest
+- Testa: Register → JWT válido
+- Valida: Token expiração, refresh não implementado
+
+### LeituraSensorIntegrationTest
+- Testa: Chave composta LeituraSensorId
+- Valida: Apenas 1 leitura por (sensor, timestamp)
+
+### AlertaIntegrationTest & OcorrenciaIntegrationTest
+- Testes de CRUD com validações
+
+**Executar testes:**
+```bash
+mvn test
+# Ou especifico
+mvn test -Dtest=RegiaoIntegrationTest
+```
+
+---
+
+## 🐳 Docker & Deploy
+
+### Dockerfile (Multi-stage)
+
+```dockerfile
+# Build stage
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn -DskipTests clean package
+
+# Runtime stage
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/orbitalguard-1.0.0.jar app.jar
+ENV SPRING_PROFILES_ACTIVE=prod
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+**Build local:**
+```bash
+mvn clean package -DskipTests
+docker build -t orbitalguard:latest .
+docker run -p 8080:8080 orbitalguard:latest
+```
+
+### Deploy em Render (Nuvem)
+
+**render.yaml** (Blueprint automático):
+```yaml
+services:
+  - type: web
+    name: orbitalguard-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: orbitalguard-db
+          property: connectionString
+databases:
+  - name: orbitalguard-db
+    engine: postgresql
+```
+
+**URL em Produção:**
+```
+https://orbitalguard-api.onrender.com
+```
+
+---
+
+## 💻 Como Rodar Localmente
+
+### Pré-requisitos
 
 - Java 17+
 - Maven 3.9+
+- Git
+- (Opcional) PostgreSQL local
 
 ### Passos
 
 ```bash
+# 1. Clonar
 git clone https://github.com/GomesMancera/OrbitalGuard-java.git
 cd OrbitalGuard-java
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
+
+# 2. Compilar
+mvn clean compile
+
+# 3. Rodar em dev (H2 em memória, sem auth)
+mvn spring-boot:run
+
+# 4. Testar
+curl http://localhost:8080/api/v1/regioes
+curl http://localhost:8080/swagger-ui/index.html
+curl http://localhost:8080/h2-console
 ```
 
-A API estara em `http://localhost:8080`
+**Credenciais seed (dev):**
+- Email: `admin@orbitalguard.com`
+- Senha: `admin123`
+- Role: `ADMIN`
 
-- Swagger: http://localhost:8080/swagger-ui/index.html
-- H2 Console: http://localhost:8080/h2-console (JDBC: `jdbc:h2:mem:orbitalguard`)
+---
 
-## Exemplos de Teste (curl)
+## ✅ Checklist de Requisitos (Java Advanced FIAP)
 
-### 1. Registrar usuario
+- [x] **Anotações Spring** (`@Entity`, `@Service`, `@Component`, `@Autowired`)
+- [x] **Injeção de Dependências** (`@RequiredArgsConstructor`, `@Autowired`)
+- [x] **Spring Data JPA** (8 repositórios, `findBy*` queries)
+- [x] **Validação Bean Validation** (DTOs com Records)
+- [x] **Herança JPA** (JOINED strategy em `Sensor`)
+- [x] **Chaves Compostas** (LeituraSensorId)
+- [x] **Tipos Embutidos** (Coordenadas)
+- [x] **Spring Security + JWT** (autenticação, autorização)
+- [x] **REST correto** (verbos HTTP, status codes, HATEOAS)
+- [x] **Tratamento de Erros Global** (`GlobalExceptionHandler`)
+- [x] **Paginação** (Pageable em endpoints de listagem)
+- [x] **Documentação Swagger** (`/swagger-ui/index.html`)
+- [x] **Testes Automatizados** (MockMvc, DataJpaTest, SpringBootTest)
+- [x] **Deploy em Nuvem** (Render com PostgreSQL)
+- [x] **CI/CD** (GitHub Actions)
 
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d "{\"nome\":\"Operador\",\"email\":\"operador@orbitalguard.com\",\"senha\":\"senha123\"}"
-```
+---
 
-> Registro publico cria usuarios com role `OPERADOR`. Em dev, existe admin seed: `admin@orbitalguard.com` / `admin123`.
+## 📚 Referências
 
-### 2. Login
+- [Spring Boot 3.3 Documentation](https://spring.io/projects/spring-boot)
+- [Spring Data JPA](https://spring.io/projects/spring-data-jpa)
+- [Spring Security + JWT](https://www.baeldung.com/spring-security-authentication-and-authorization)
+- [Springdoc OpenAPI](https://springdoc.org/)
+- [JPA Inheritance Strategies](https://www.baeldung.com/hibernate-inheritance)
 
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"admin@orbitalguard.com\",\"senha\":\"senha123\"}"
-```
+---
 
-### 3. Criar regiao (com token)
+## 👥 Integrantes
 
-```bash
-curl -X POST http://localhost:8080/api/v1/regioes \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_TOKEN" \
-  -d "{\"nome\":\"Amazonia\",\"descricao\":\"Regiao norte\",\"latitude\":-3.46,\"longitude\":-62.21}"
-```
+| Nome | RM | Função |
+|------|-----|--------|
+| Gabriel Gomes Mancera | 562279 | Arquitetura / Backend |
+| Raphael Gomes Mancera | 562279 | Testes / Deploy |
+| Bruno Vinicius Barbosa | 566366 | JPA Modeling |
+| João Victor Rebello de Santis | 555287 | Controllers / DTOs |
 
-### 4. Criar sensor de agua
+---
 
-```bash
-curl -X POST http://localhost:8080/api/v1/sensores \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_TOKEN" \
-  -d "{\"nome\":\"Sensor Rio\",\"localizacao\":\"Marginal\",\"tipo\":\"AGUA\",\"regiaoId\":1,\"latitude\":-23.55,\"longitude\":-46.63,\"phMinimo\":6.5,\"phMaximo\":8.5,\"turbidezMaxima\":50}"
-```
+## 📄 Licença
 
-## Testes Automatizados
+Projeto acadêmico — FIAP Global Solution (Java Advanced).
 
-```bash
-mvn test
-```
+---
 
-Cobertura: autenticacao JWT, CRUD de regioes, sensores com heranca, validacao (400), not found (404).
-
-## Deploy no Render
-
-1. Fazer push do codigo para o GitHub
-2. No Render, criar **PostgreSQL** (free)
-3. Criar **Web Service** com Docker ou Maven:
-   - Build: `mvn clean package -DskipTests`
-   - Start: `java -jar target/orbitalguard-1.0.0.jar`
-4. Configurar variaveis de ambiente:
-   - `SPRING_PROFILES_ACTIVE=prod`
-   - `JWT_SECRET` (string aleatoria com 32+ caracteres)
-   - `DATABASE_URL` (fornecida pelo Render)
-5. Usar o arquivo `render.yaml` para deploy automatico (Blueprint)
-
-## Informacoes para Avaliacao
-
-- API REST com verbos HTTP corretos e status codes padronizados
-- HATEOAS em todas as respostas de recursos (links `self`, `update`, `delete` e relacionais)
-- DTOs com Java Records e validacao Bean Validation (`@NotBlank`, `@Email`, `@Min`, `@DecimalMin`, etc.)
-- Tratamento global de excecoes com respostas JSON padronizadas
-- Spring Security com autenticacao JWT e autorizacao por roles (`ADMIN`, `OPERADOR`)
-- Modelagem JPA avancada: heranca JOINED, chave composta, `@Embeddable`
-- Documentacao Swagger com botao Authorize
-- CORS configurado para acesso externo
-- Profiles separados para dev (H2) e prod (PostgreSQL)
-- Testes de integracao com JUnit 5 + MockMvc
-- CI configurado em `.github/workflows/ci.yml`
-
-## Checklist de Entrega (Global Solution)
-
-| Item | Status |
-|------|--------|
-| Codigo da API completo | Concluido |
-| `mvn test` local | Executar antes do deploy |
-| Repositorio GitHub publico | https://github.com/GomesMancera/OrbitalGuard-java |
-| Deploy Render | https://orbitalguard-api.onrender.com — ver [DEPLOY.md](DEPLOY.md) |
-| Links no README | Atualizar apos deploy e videos |
-| Video 10 min | Pendente |
-| Pitch 3 min | Pendente |
-| Entrega URL GitHub na plataforma FIAP | Pendente |
-
-## Licenca
-
-Projeto academico - FIAP Global Solution.
+**Status:** ✅ Em produção no Render  
+**Última atualização:** Junho 2025  
+**Repositório:** https://github.com/GomesMancera/OrbitalGuard-java
