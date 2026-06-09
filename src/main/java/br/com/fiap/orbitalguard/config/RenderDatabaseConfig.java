@@ -44,7 +44,12 @@ public class RenderDatabaseConfig {
                 password = URLDecoder.decode(userInfo.substring(separatorIndex + 1), StandardCharsets.UTF_8);
             }
 
-            String jdbcUrl = "jdbc:postgresql://" + uri.getHost() + ':' + uri.getPort() + uri.getPath()
+            int port = uri.getPort();
+            if (port == -1) {
+                port = 5432;
+            }
+
+            String jdbcUrl = "jdbc:postgresql://" + uri.getHost() + ':' + port + uri.getPath()
                     + (StringUtils.hasText(uri.getQuery()) ? "?" + uri.getQuery() : "");
 
             return DataSourceBuilder.create()
